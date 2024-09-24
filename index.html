@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>アニメーション付きチャットUI</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            color: white;
+        }
+        .chat-container {
+            width: 90vw;
+            height: 90vh;
+            background-color: #1e1e1e;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+        }
+        .chat-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end; /* 変更: メッセージを下に寄せる */
+            padding: 20px;
+            overflow: hidden; /* 変更: チャットエリアのオーバーフローを隠す */
+        }
+        .global-header {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .messages {
+            flex: 1;
+            overflow-y: auto; /* 変更: スクロール可能に */
+            margin: 20px 0;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .message {
+            background-color: #333;
+            padding: 10px 15px;
+            border-radius: 10px;
+            max-width: 60%;
+            position: relative;
+            opacity: 0;
+            transform: translateY(20px);
+            animation: slideIn 0.3s forwards;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+        .chat-input {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px; /* 追加: paddingを追加してスペースを確保 */
+            background-color: #0000004b; /* 追加: 入力エリアの背景色 */
+        }
+        .chat-input input {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 20px;
+            background-color: #2d2d2d;
+            color: #fff;
+        }
+        .chat-input button {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 20px;
+            background-color: #444;
+            color: #fff;
+            cursor: pointer;
+            transition: transform 0.2s, background-color 0.2s;
+        }
+        .chat-input button:active {
+            transform: scale(0.95);
+            background-color: #555;
+        }
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-area">
+            <div class="global-header">global</div>
+            <div class="messages" id="messages"></div>
+        </div>
+        <div class="chat-input">
+            <input type="text" id="message-input" placeholder="Type a message...">
+            <button id="send-button">Send</button>
+        </div>
+    </div>
+    <audio id="chat-sound" src="https://github.com/L4SaR/ChatSound/raw/refs/heads/main/harp.ogg"></audio>
+    <script src="/socket.io/socket.io.js"></script>
+<script>
+    const socket = io();
+
+    function sendMessage() {
+        const input = document.getElementById('message-input');
+        const message = input.value.trim();
+        if (message) {
+            const formattedMessage = `<div><img src="https://cdn-www.bluestacks.com/bs-images/7d0e3d1a9f802a3a67d415893c7e6ae6.png" style="width: 30px; height: 30px; border-radius: 50%; margin-right: 5px;"> <strong>${username}:</strong> ${message}</div>`;
+            document.getElementById('messages').innerHTML += formattedMessage;
+            input.value = '';
+            scrollToBottom();
+            playSound();
+            socket.emit('chat message', formattedMessage); // メッセージをサーバーに送信
+        } else {
+            alert("メッセージが空です。");
+        }
+    }
+
+    // サーバーからメッセージを受信
+    socket.on('chat message', function(msg) {
+        const messages = document.getElementById('messages');
+        messages.innerHTML += msg;
+        scrollToBottom();
+    });
+        let username = null; // 初期状態ではnullに設定
+
+        // ユーザー名を取得する関数
+        function getUsername() {
+            h5gg.clearResults();
+            let addr1 = h5gg.getValue(base + 0x4A3D0C8, 'U64');
+            let addr2 = Number(addr1) + 0x434;
+            username = readUTF16String(addr2, 10);
+
+            if (username === "NickName" || !username) {
+                username = "Guest"; // 名前が取得できなかった場合に"Guest"を設定
+            }
+        }
+
+        // メッセージを送信する関数
+        function sendMessage() {
+            const input = document.getElementById('message-input');
+            const message = input.value.trim();
+            if (message) {
+                const formattedMessage = `
+                    <div>
+                        <img src="https://cdn-www.bluestacks.com/bs-images/7d0e3d1a9f802a3a67d415893c7e6ae6.png" alt="User Icon" style="width: 30px; height: 30px; border-radius: 50%; margin-right: 5px;">
+                        <strong>${username}:</strong> ${message}
+                    </div>`;
+                const messageElement = document.createElement('div');
+                messageElement.className = 'message';
+                messageElement.innerHTML = formattedMessage;
+                document.getElementById('messages').appendChild(messageElement);
+                input.value = '';
+                messageElement.style.animation = 'slideIn 0.3s forwards';
+                scrollToBottom();
+                playSound(); // 音を再生
+            } else {
+                alert("メッセージが空です。");
+            }
+        }
+
+        // 音を再生する関数
+        function playSound() {
+            const sound = document.getElementById('chat-sound');
+            sound.currentTime = 0; // 音を再生するたびに先頭に戻す
+            sound.play();
+        }
+
+        // メッセージエリアをスクロールする関数
+        function scrollToBottom() {
+            const messages = document.getElementById('messages');
+            messages.scrollTo({
+                top: messages.scrollHeight,
+                behavior: 'smooth'
+            });
+        }
+
+        // サイト起動時にユーザー名を取得する
+        window.onload = function() {
+            getUsername(); // ページがロードされたときに一度だけユーザー名を取得
+        };
+
+        document.getElementById('send-button').addEventListener('click', sendMessage);
+        document.getElementById('message-input').addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        });
+    </script>
+</body>
+</html>
